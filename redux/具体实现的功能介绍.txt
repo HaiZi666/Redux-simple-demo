@@ -1,0 +1,199 @@
+一:功能介绍
+      运用React+Redux——react-redux库connect()方法与Provider组件，实现组件间的数据交互。
+      
+二：具体实例
+  1，A，B，C作为展示组件（presentational component），显示数据，
+               
+  2，A,B经过dispatch发送action，reducer，生成新的state，在显示新的数据。
+  
+  3，C监听，一旦store发生改变就显示新的数据。
+  
+三：知识储备
+    
+    1，展示组件（presentational component） 也叫UI组件、纯组件 
+		特点如下:
+		
+		负责UI显示
+		无状态不使用this.state
+		数据来自this.props
+		不使用任何redux的API
+		展示组件其实就是把我们的普通组件的数据与逻辑抽离出来
+		
+	2，容器组件
+		
+		容器组件（container component） 
+		特点如下：
+		
+		负责管理数据和业务逻辑
+		带有内部状态
+		使用redux的API
+		容器组件是由我们react-redux库的API通过展示组件生成的	
+	  
+    3，react-redux库的核心 connect()方法
+      
+		connect的意思就是连接展示组件与容器组件的意思 
+		为了加以区分，我用Container表示容器组件，用Component表示展示组件 
+		用法如下
+		
+		import {connect} from 'react-redux';
+		const Container = connect()(Component);
+		
+		结构就是这个样子
+		
+		<Container>
+		    <Component/>
+		</Container>
+		
+		不过现在我们仅仅是通过展示组件生成了一个容器组件 
+		并且将它们连接了起来 
+		但是容器组件中并没有数据和逻辑 
+		只是一具空壳，毫无意义 
+		所以我们还需要向这个connect函数中传入两个参数 
+		它接收两个值作为参数：（实际是四个，另外两个不常用暂时不讲）
+		
+		mapStateToProps（输入逻辑） 
+		负责将通过state获得的数据映射到展示组件的this.props
+		mapDispatchToProps（输出逻辑） 
+		负责将用户操作转化为Action的功能函数映射到展示组件的this.props
+		名字就和reducer一样，只是官方的概念性叫法（不过还是蛮形象的） 
+		使用的时候可以自定义名字（不过一定要语义化）
+		
+		所以完整的用法应该是这样的
+		
+		const Container = connect(
+		    mapStateToProps,
+		    mapDispatchToProps
+		)(Component);
+		
+		但是此时mapStateToProps与mapDispatchToProps我们还没有定义
+		
+		mapStateToProps
+		
+		mapStateToProps负责将state的数据映射到展示组件的this.props 
+		它是一个函数，接收参数state对象 
+		如果有必要的话，还可以使用第二个参数：容器组件的props属性 
+		返回一个对象表示state到展示组件props的映射关系
+		
+		const mapStateToProps = (state) => {
+		    return {
+		        list: state.list
+		    }
+		}
+		
+		此时你会发现这个函数名有多合适
+		
+		返回对象中的“值”—— state.list 
+		表示我们要将state的list数组传递给内部的展示组件
+		返回对象中的“键”—— list 
+		表示我们在展示组件中可以通过this.props.list来获取这个数组
+		但有时，我们不能这么轻松的就通过state的某个属性值获得要传递的数据 
+		这时我们可以自定义一个处理函数返回要传递的数据
+		
+		const mapStateToProps = (state) => {
+		    return {
+		        list: handler(state.list, state.option);
+		    }
+		}
+		
+		比如说这里handler就是我们的处理函数 
+		拿我上一篇文章的toDoList待办事项列表为例 
+		这个handler大概是这样的
+		
+		const handler = (list, option) => {
+		    switch(option){
+		        case "SHOW_ACTION":
+		            return list.filter(...);
+		        case "SHOW_CROSSED":
+		            return list.filter(...);
+		        ...
+		        default:
+		            return list;
+		    }
+		}
+		
+		这个函数我没有写完整，相信大家应该都能看明白 
+		通过判断option我来将list数组进行 “过滤” 
+		函数返回后作为数据返回给展示组件
+		
+		mapStateToProps会订阅store，state更新后，就会触发展示组件重绘 
+		不过在connect( )函数中，我们可以省略mapStateToProps 
+		如果这么做的话，store更新就不会触发展示组件重绘了
+		
+		上面也说道了，除了state我们还可以使用容器组件的属性props
+		
+		const mapStateToProps = (state, ownProps) => {
+		    return {
+		        ...
+		    }
+		}
+		
+		如果容器组件的props发生改变的话，同样会触发展示组件重绘
+		
+		mapDispatchToProps
+		
+		mapDispatchToProps负责定义发送action的函数映射到展示组件的this.props 
+		与它的兄弟不同，它既可以是函数也可以是对象 
+		作为函数，它会得到store.dispatch作为参数 
+		同样还有一个容器组件的props属性可以使用 
+		返回值我不用说大家也能猜到 
+		就是一个表示映射关系的对象 
+		但是这里表示的是用户如何发出Action（比如触发事件）
+		
+		const mapDispatchToProps = (state, ownProps) => {
+		    return {
+		        onClick: () => {
+		            dispatch({
+		                type: 'SET_FILTER',
+		                filter: ownProps.filter
+		            })
+		        }
+		    }
+		}
+		
+		返回对象中的“值”—— () => {dispatch(...)} 
+		表示我们要传递给内部展示组件的函数（函数功能：dispatch一个action）
+		返回对象中的“键”—— onClick 
+		表示我们在展示组件中可以通过this.props.onClick来获取这个函数
+		如果是作为对象的话，就更简单了 
+		上面的写法和下面的等价
+		
+		const mapDispatchToProps = {
+		    onClick: (filter) => {
+		        type: 'SET_FILTER',
+		        filter: filter
+		    }
+		}
+		
+		这个对象的值是一个函数，它被认为是一个Action Creator 
+		函数的参数可以填入容器组件的props 
+		返回的Action会由redux自动dispatch
+   
+   
+    4,Provider组件  
+		在完成了Container与Componet的连接 
+		实现了Container的管理数据与业务逻辑之后还没完 
+		还有问题 
+		我们使用了mapStateToProps，它的参数是state 
+		也就是说，他需要传入state 
+		如果我们手动将state对象一层一层的传入容器组件 
+		应用小还好说，大应用深层的组件简直累死了，绝对让你传到怀疑人生
+		
+		好在，react-redux提供了Provider组件让我们省了不少功夫 
+		它就相当于我们整体的容器组件（不过区别很大） 
+		用法就是在我们根组件外部嵌套一层Provider，传入store 
+		（使用全局的store有风险） 
+		这样所以的子组件都可以开心地拿到state了 
+		我们也省心了
+		
+		render(
+		  <Provider store={store}>
+		    <App/>
+		  </Provider>,
+		  document.getElementById('root')
+		);
+		
+		内部的原理是： 
+		Provider接受store作为其props，并声明为context的属性之一 
+		子组件在声明了contextTypes之后可以通过this.context.store访问到store
+		
+              参考博客：http://blog.csdn.net/q1056843325/article/details/54880804?locationNum=2
